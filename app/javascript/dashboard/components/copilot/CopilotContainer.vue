@@ -1,31 +1,24 @@
 <script setup>
-import { ref, computed, onMounted, watchEffect } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import Copilot from 'dashboard/components-next/copilot/Copilot.vue';
-import ConversationAPI from 'dashboard/api/inbox/conversation';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
-
-const props = defineProps({
-  conversationId: {
-    type: [Number, String],
-    required: true,
-  },
-  conversationInboxType: {
-    type: String,
-    required: true,
-  },
-});
 
 const store = useStore();
 const currentUser = useMapGetter('getCurrentUser');
 const assistants = useMapGetter('captainAssistants/getRecords');
 const inboxAssistant = useMapGetter('getCopilotAssistant');
 const { uiSettings, updateUISettings } = useUISettings();
+const currentChat = useMapGetter('getSelectedChat');
+
+const getUIState = useMapGetter('uiState/getUIState');
+const isSidebarOpen = computed(() => getUIState.value('isCopilotSidebarOpen'));
 
 const messages = ref([]);
 const isCaptainTyping = ref(false);
 const selectedAssistantId = ref(null);
+const copilotConnector = ref(null);
 
 const activeAssistant = computed(() => {
   const preferredId = uiSettings.value.preferred_captain_assistant_id;
@@ -59,7 +52,12 @@ const handleReset = () => {
   messages.value = [];
 };
 
-const sendMessage = async message => {
+const sendMessage = message => {
+  // Ensure WebSocket is connected before sending
+  if (!copilotConnector.value || !isSidebarOpen.value) {
+    return;
+  }
+
   // Add user message
   messages.value.push({
     id: messages.value.length + 1,
@@ -68,55 +66,71 @@ const sendMessage = async message => {
   });
   isCaptainTyping.value = true;
 
-  try {
-    const { data } = await ConversationAPI.requestCopilot(
-      props.conversationId,
-      {
-        previous_history: messages.value
-          .map(m => ({
-            role: m.role,
-            content: m.content,
-          }))
-          .slice(0, -1),
-        message,
-        assistant_id: selectedAssistantId.value,
-      }
-    );
-    messages.value.push({
-      id: new Date().getTime(),
-      role: 'assistant',
-      content: data.message,
-    });
-  } catch (error) {
-    // eslint-disable-next-line
-    console.log(error);
-  } finally {
-    isCaptainTyping.value = false;
-  }
+  copilotConnector.value.sendMessage({
+    assistantId: activeAssistant.value.id,
+    conversationId: currentChat.value?.id,
+    previousHistory: messages.value
+      .filter(m => m.role !== 'assistant_thinking')
+      .map(m => ({
+        role: m.role,
+        content: m.content,
+      }))
+      .slice(0, -1),
+    message,
+  });
 };
 
 onMounted(() => {
   store.dispatch('captainAssistants/get');
 });
 
-watchEffect(() => {
-  if (props.conversationId) {
-    store.dispatch('getInboxCaptainAssistantById', props.conversationId);
-    selectedAssistantId.value = activeAssistant.value?.id;
-  }
-});
+// const onCopilotResponse = data => {
+//   if (data.type === 'final_response') {
+//     messages.value.push({
+//       id: new Date().getTime(),
+//       role: 'assistant',
+//       content: data.response.response,
+//     });
+//     isCaptainTyping.value = false;
+//   } else if (data.type === 'ui_event') {
+//     if (data.event === 'ui:linear_ticket_create') {
+//       emitter.emit('ui:linear_ticket_create');
+//       setTimeout(() => {
+//         emitter.emit('ui:linear_ticket_create_data', data.response);
+//       }, 100);
+//     }
+//   } else {
+//     messages.value.push({
+//       id: new Date().getTime(),
+//       role: 'assistant_thinking',
+//       content: data.response.response,
+//       reasoning: data.response.reasoning,
+//     });
+//   }
+// };
+
+const handleClose = () => {
+  store.dispatch('uiState/set', { isCopilotSidebarOpen: false });
+};
 </script>
 
 <template>
-  <Copilot
-    :messages="messages"
-    :support-agent="currentUser"
-    :is-captain-typing="isCaptainTyping"
-    :conversation-inbox-type="conversationInboxType"
-    :assistants="assistants"
-    :active-assistant="activeAssistant"
-    @set-assistant="setAssistant"
-    @send-message="sendMessage"
-    @reset="handleReset"
-  />
+  <div
+    v-if="isSidebarOpen"
+    class="border-l border-n-weak w-[20rem] min-w-[20rem]"
+  >
+    <Copilot
+      :messages="messages"
+      :support-agent="currentUser"
+      :is-captain-typing="isCaptainTyping"
+      :conversation-inbox-type="conversationInboxType"
+      :assistants="assistants"
+      :active-assistant="activeAssistant"
+      @set-assistant="setAssistant"
+      @send-message="sendMessage"
+      @reset="handleReset"
+      @close="handleClose"
+    />
+  </div>
+  <div v-else class="hidden" />
 </template>

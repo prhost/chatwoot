@@ -13,6 +13,9 @@ module Captain::ChatHelper
     )
 
     handle_response(response)
+  rescue StandardError => e
+    Rails.logger.error { "[CAPTAIN][ChatCompletion] #{e}" }
+    raise e
   end
 
   private
@@ -38,9 +41,9 @@ module Captain::ChatHelper
   end
 
   def process_tool_call(tool_call)
-    arguments = JSON.parse(tool_call['function']['arguments'])
-    function_name = tool_call['function']['name']
     tool_call_id = tool_call['id']
+    function_name = tool_call['function']['name']
+    arguments = JSON.parse(tool_call['function']['arguments'])
 
     if @tool_registry.respond_to?(function_name)
       execute_tool(function_name, arguments, tool_call_id)

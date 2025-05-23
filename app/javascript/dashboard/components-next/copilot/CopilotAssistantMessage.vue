@@ -17,7 +17,7 @@ const props = defineProps({
   },
   conversationInboxType: {
     type: String,
-    required: true,
+    default: '',
   },
 });
 
