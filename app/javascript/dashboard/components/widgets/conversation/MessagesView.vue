@@ -1,5 +1,5 @@
 <script>
-import { ref } from 'vue';
+import { ref, provide } from 'vue';
 // composable
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -49,6 +49,7 @@ export default {
   mixins: [inboxMixin],
   setup() {
     const isPopOutReplyBox = ref(false);
+    const conversationPanelRef = ref(null);
     const { isEnterprise } = useConfig();
 
     const closePopOutReplyBox = () => {
@@ -84,6 +85,8 @@ export default {
       FEATURE_FLAGS.CHATWOOT_V4
     );
 
+    provide('contextMenuElementTarget', conversationPanelRef);
+
     return {
       isEnterprise,
       isPopOutReplyBox,
@@ -94,6 +97,7 @@ export default {
       fetchIntegrationsIfRequired,
       fetchLabelSuggestions,
       showNextBubbles,
+      conversationPanelRef,
     };
   },
   data() {
@@ -506,6 +510,7 @@ export default {
 
     <NextMessageList
       v-if="showNextBubbles"
+      ref="conversationPanelRef"
       class="conversation-panel"
       :current-user-id="currentUserId"
       :first-unread-id="unReadMessages[0]?.id"
@@ -537,7 +542,7 @@ export default {
         />
       </template>
     </NextMessageList>
-    <ul v-else class="conversation-panel">
+    <ul v-else ref="conversationPanelRef" class="conversation-panel">
       <transition name="slide-up">
         <!-- eslint-disable-next-line vue/require-toggle-inside-transition -->
         <li class="min-h-[4rem]">
