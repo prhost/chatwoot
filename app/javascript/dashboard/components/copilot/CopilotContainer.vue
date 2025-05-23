@@ -14,11 +14,15 @@ const currentChat = useMapGetter('getSelectedChat');
 
 const getUIState = useMapGetter('uiState/getUIState');
 const isSidebarOpen = computed(() => getUIState.value('isCopilotSidebarOpen'));
-
-const messages = ref([]);
-const isCaptainTyping = ref(false);
+const selectedCopilotThreadId = computed(() =>
+  getUIState.value('selectedCopilotThreadId')
+);
+const messages = computed(() =>
+  store.getters['copilotMessages/getMessagesByThreadId'](
+    selectedCopilotThreadId.value
+  )
+);
 const selectedAssistantId = ref(null);
-const copilotConnector = ref(null);
 
 const activeAssistant = computed(() => {
   const preferredId = uiSettings.value.preferred_captain_assistant_id;
@@ -49,65 +53,32 @@ const setAssistant = async assistant => {
 };
 
 const handleReset = () => {
-  messages.value = [];
+  store.dispatch('uiState/set', { selectedCopilotThreadId: null });
 };
 
-const sendMessage = message => {
-  // Ensure WebSocket is connected before sending
-  if (!copilotConnector.value || !isSidebarOpen.value) {
+const sendMessage = async message => {
+  if (!isSidebarOpen.value) {
     return;
   }
 
-  // Add user message
-  messages.value.push({
-    id: messages.value.length + 1,
-    role: 'user',
-    content: message,
-  });
-  isCaptainTyping.value = true;
-
-  copilotConnector.value.sendMessage({
-    assistantId: activeAssistant.value.id,
-    conversationId: currentChat.value?.id,
-    previousHistory: messages.value
-      .filter(m => m.role !== 'assistant_thinking')
-      .map(m => ({
-        role: m.role,
-        content: m.content,
-      }))
-      .slice(0, -1),
-    message,
-  });
+  if (selectedCopilotThreadId.value) {
+    await store.dispatch('copilotMessages/create', {
+      assistant_id: activeAssistant.value.id,
+      conversation_id: currentChat.value?.id,
+      threadId: selectedCopilotThreadId.value,
+      message,
+    });
+  } else {
+    const response = await store.dispatch('copilotThreads/create', {
+      assistant_id: activeAssistant.value.id,
+      conversation_id: currentChat.value?.id,
+      message,
+    });
+    store.dispatch('uiState/set', { selectedCopilotThreadId: response.id });
+  }
 };
 
-onMounted(() => {
-  store.dispatch('captainAssistants/get');
-});
-
-// const onCopilotResponse = data => {
-//   if (data.type === 'final_response') {
-//     messages.value.push({
-//       id: new Date().getTime(),
-//       role: 'assistant',
-//       content: data.response.response,
-//     });
-//     isCaptainTyping.value = false;
-//   } else if (data.type === 'ui_event') {
-//     if (data.event === 'ui:linear_ticket_create') {
-//       emitter.emit('ui:linear_ticket_create');
-//       setTimeout(() => {
-//         emitter.emit('ui:linear_ticket_create_data', data.response);
-//       }, 100);
-//     }
-//   } else {
-//     messages.value.push({
-//       id: new Date().getTime(),
-//       role: 'assistant_thinking',
-//       content: data.response.response,
-//       reasoning: data.response.reasoning,
-//     });
-//   }
-// };
+onMounted(() => store.dispatch('captainAssistants/get'));
 
 const handleClose = () => {
   store.dispatch('uiState/set', { isCopilotSidebarOpen: false });
@@ -122,7 +93,9 @@ const handleClose = () => {
     <Copilot
       :messages="messages"
       :support-agent="currentUser"
-      :is-captain-typing="isCaptainTyping"
+      :is-captain-typing="
+        messages[messages.length - 1]?.message_type !== 'assistant'
+      "
       :conversation-inbox-type="conversationInboxType"
       :assistants="assistants"
       :active-assistant="activeAssistant"

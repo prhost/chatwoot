@@ -13,10 +13,6 @@ import CopilotHeader from './CopilotHeader.vue';
 import CopilotEmptyState from './CopilotEmptyState.vue';
 
 const props = defineProps({
-  supportAgent: {
-    type: Object,
-    default: () => ({}),
-  },
   messages: {
     type: Array,
     default: () => [],
@@ -64,11 +60,11 @@ const groupedMessages = computed(() => {
   let thinkingGroup = [];
 
   props.messages.forEach(message => {
-    if (message.role === 'assistant_thinking') {
+    if (message.message_type === 'assistant_thinking') {
       thinkingGroup.push(message);
     } else {
       if (thinkingGroup.length > 0) {
-        result.push({ type: 'thinking_group', messages: thinkingGroup });
+        result.push({ type: 'thinking_group-', messages: thinkingGroup });
         thinkingGroup = [];
       }
       result.push({ type: 'message', message });
@@ -76,7 +72,7 @@ const groupedMessages = computed(() => {
   });
 
   if (thinkingGroup.length > 0) {
-    result.push({ type: 'thinking_group', messages: thinkingGroup });
+    result.push({ type: 'thinking_group-', messages: thinkingGroup });
   }
 
   return result;
@@ -102,23 +98,29 @@ watch(
       ref="chatContainer"
       class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
     >
-      <div v-if="messages.length" class="space-y-6 flex-1 flex flex-col w-full">
+      <div
+        v-if="messages.length && assistants.length"
+        class="space-y-6 flex-1 flex flex-col w-full"
+      >
         <template
           v-for="item in groupedMessages"
-          :key="item.type === 'message' ? item.message.id : 'thinking-group'"
+          :key="
+            item.type === 'message'
+              ? item.message.id
+              : 'thinking_group-' + item.messages[0].id
+          "
         >
           <template v-if="item.type === 'message'">
             <CopilotAgentMessage
-              v-if="item.message.role === 'user'"
-              :support-agent="supportAgent"
-              :message="item.message"
+              v-if="item.message.message_type === 'user'"
+              :message="item.message.message"
             />
             <CopilotAssistantMessage
               v-else-if="
-                item.message.role === 'assistant' ||
-                item.message.role === 'system'
+                item.message.message_type === 'assistant' ||
+                item.message.message_type === 'system'
               "
-              :message="item.message"
+              :message="item.message.message"
               :conversation-inbox-type="conversationInboxType"
             />
           </template>
@@ -126,8 +128,8 @@ watch(
             v-else
             :messages="item.messages"
             :has-assistant-message-after="
-              groupedMessages[groupedMessages.indexOf(item) + 1]?.message
-                ?.role === 'assistant'
+              groupedMessages[groupedMessages.indexOf(item) + 1]?.messages?.[0]
+                ?.message_type === 'assistant'
             "
           />
         </template>
@@ -135,7 +137,8 @@ watch(
         <CopilotLoader v-if="isCaptainTyping" />
       </div>
       <CopilotEmptyState
-        v-if="!messages.length"
+        v-else
+        :has-assistants="assistants.length > 0"
         @use-suggestion="sendMessage"
       />
     </div>

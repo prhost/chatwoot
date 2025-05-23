@@ -4,6 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Icon from '../icon/Icon.vue';
 
+defineProps({
+  hasAssistants: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const emit = defineEmits(['useSuggestion']);
 const { t } = useI18n();
 const route = useRoute();
@@ -25,16 +32,16 @@ const routePromptMap = {
   ],
   dashboard: [
     {
-      label: 'High priority conversations',
-      prompt: 'Get me a summary of all high priority open conversations',
+      label: 'CAPTAIN.COPILOT.PROMPTS.HIGH_PRIORITY.LABEL',
+      prompt: 'CAPTAIN.COPILOT.PROMPTS.HIGH_PRIORITY.CONTENT',
     },
     {
-      label: 'List contacts',
-      prompt: 'Show me the list of contacts',
+      label: 'CAPTAIN.COPILOT.PROMPTS.LIST_CONTACTS.LABEL',
+      prompt: 'CAPTAIN.COPILOT.PROMPTS.LIST_CONTACTS.CONTENT',
     },
     {
-      label: 'Summarize articles',
-      prompt: 'List articles that are in draft',
+      label: 'CAPTAIN.COPILOT.PROMPTS.SUMMARIZE_ARTICLES.LABEL',
+      prompt: 'CAPTAIN.COPILOT.PROMPTS.SUMMARIZE_ARTICLES.CONTENT',
     },
   ],
 };
@@ -71,7 +78,21 @@ const handleSuggestion = opt => {
         </p>
       </div>
     </div>
-    <div class="w-full space-y-2">
+    <div v-if="!hasAssistants" class="w-full space-y-2">
+      <p class="text-sm text-n-slate-11 leading-6">
+        {{ $t('CAPTAIN.ASSISTANTS.NO_ASSISTANTS_AVAILABLE') }}
+      </p>
+      <router-link
+        :to="{
+          name: 'captain_assistants_index',
+          params: { accountId: route.params.accountId },
+        }"
+        class="text-n-slate-11 underline hover:text-n-slate-12"
+      >
+        {{ $t('CAPTAIN.ASSISTANTS.ADD_NEW') }}
+      </router-link>
+    </div>
+    <div v-else class="w-full space-y-2">
       <span class="text-xs text-n-slate-10 block">
         {{ $t('CAPTAIN.COPILOT.TRY_THESE_PROMPTS') }}
       </span>

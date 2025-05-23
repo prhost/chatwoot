@@ -1,6 +1,7 @@
 const initialState = {
   isCopilotSidebarOpen: false,
   isConversationSidebarOpen: true,
+  selectedCopilotThreadId: null,
 };
 
 const types = {

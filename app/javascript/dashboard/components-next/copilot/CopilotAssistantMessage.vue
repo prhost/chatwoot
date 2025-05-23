@@ -22,7 +22,9 @@ const props = defineProps({
 });
 
 const messageContent = computed(() => {
-  const formatter = new MessageFormatter(props.message.content);
+  const formatter = new MessageFormatter(
+    props.message.content || props.message.response
+  );
   return formatter.formattedMessage;
 });
 
