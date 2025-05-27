@@ -41,8 +41,8 @@ module Captain::ChatHelper
   end
 
   def process_tool_call(tool_call)
-    function_name = tool_call['function']['name']
     arguments = JSON.parse(tool_call['function']['arguments'])
+    function_name = tool_call['function']['name']
     tool_call_id = tool_call['id']
 
     if @tool_registry.respond_to?(function_name)
