@@ -4,11 +4,11 @@ echo "🔨 Compilando assets usando Docker..."
 
 # Subir o serviço de build se não estiver rodando
 echo "📦 Preparando container de build..."
-docker-compose -f docker-compose.production.modificado.yaml --profile build up -d vite-build
+docker compose -f docker-compose.production.modificado.yaml --profile build up -d vite-build
 
 # Instalar pnpm e dependências se necessário
 echo "📥 Preparando ambiente Node.js..."
-docker-compose -f docker-compose.production.modificado.yaml exec vite-build sh -c "
+docker compose -f docker-compose.production.modificado.yaml exec vite-build sh -c "
 # Instalar pnpm se não existir
 if ! command -v pnpm &> /dev/null; then
     echo '📦 Instalando pnpm...'
@@ -25,12 +25,12 @@ fi"
 
 # Compilar assets
 echo "🔨 Compilando assets..."
-docker-compose -f docker-compose.production.modificado.yaml exec vite-build npx vite build
+docker compose -f docker-compose.production.modificado.yaml exec vite-build npx vite build
 
 if [ $? -eq 0 ]; then
     echo "✅ Assets compilados com sucesso!"
     echo "🔄 Reiniciando container Rails..."
-    docker-compose -f docker-compose.production.modificado.yaml restart rails
+    docker compose -f docker-compose.production.modificado.yaml restart rails
     echo "✅ Container reiniciado!"
     echo "🌐 Aplicação disponível em: http://localhost:3000"
 else
@@ -39,4 +39,4 @@ else
 fi
 
 echo "🧹 Limpando container de build..."
-docker-compose -f docker-compose.production.modificado.yaml --profile build down vite-build 
+docker compose -f docker-compose.production.modificado.yaml --profile build down vite-build 
