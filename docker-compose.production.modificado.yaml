@@ -1,0 +1,98 @@
+services:
+  base: &base
+    image: chatwoot/chatwoot:latest
+    env_file: .env ## Change this file for customized env variables
+    volumes:
+      - storage_data:/app/storage
+      # Código Ruby/Rails que você pode modificar
+      - ./app/models:/app/app/models
+      - ./app/controllers:/app/app/controllers
+      - ./app/services:/app/app/services
+      - ./app/jobs:/app/app/jobs
+      - ./app/mailers:/app/app/mailers
+      - ./app/views:/app/app/views
+      - ./app/helpers:/app/app/helpers
+      - ./app/policies:/app/app/policies
+      - ./app/presenters:/app/app/presenters
+      - ./app/listeners:/app/app/listeners
+      - ./app/workers:/app/app/workers
+      # JavaScript/Vue.js
+      - ./app/javascript:/app/app/javascript
+      # Configurações
+      - ./config:/app/config
+      - ./lib:/app/lib
+      - ./db:/app/db
+      - ./spec:/app/spec
+      - ./enterprise:/app/enterprise
+      # EVITAR: ./app (completo) e ./public - quebram os assets!
+
+  rails:
+    <<: *base
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - INSTALLATION_ENV=docker
+      # Permite reloading de código em produção para desenvolvimento
+      - RAILS_DEVELOPMENT_HOSTS=localhost,127.0.0.1
+    entrypoint: docker/entrypoints/rails.sh
+    command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
+    restart: always
+
+  sidekiq:
+    <<: *base
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - INSTALLATION_ENV=docker
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    restart: always
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=chatwoot
+      - POSTGRES_USER=postgres
+      # Please provide your own password.
+      - POSTGRES_PASSWORD=postgres
+
+  redis:
+    image: redis:alpine
+    restart: always
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
+    env_file: .env
+    volumes:
+      - redis_data:/data
+    ports:
+      - '127.0.0.1:6379:6379'
+
+  # Serviço para compilar assets quando necessário
+  vite-build:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
+    command: ["sh", "-c", "echo 'Container pronto para build!' && tail -f /dev/null"]
+    profiles:
+      - build
+
+volumes:
+  storage_data:
+  postgres_data:
+  redis_data:
+  node_modules_cache:
