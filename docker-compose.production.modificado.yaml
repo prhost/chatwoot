@@ -56,6 +56,8 @@ services:
       - INSTALLATION_ENV=docker
     command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
     restart: always
+    networks:
+      - web
 
   postgres_chatwoot:
     image: pgvector/pgvector:pg16
