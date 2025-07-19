@@ -26,13 +26,13 @@ services:
       - ./enterprise:/app/enterprise
       # EVITAR: ./app (completo) e ./public - quebram os assets!
 
-  rails:
+  rails_chatwoot:
     <<: *base
     depends_on:
-      - postgres
-      - redis
-    ports:
-      - '127.0.0.1:3000:3000'
+      - postgres_chatwoot
+      - redis_chatwoot
+    #ports:
+    #  - '127.0.0.1:3000:3000'
     environment:
       - NODE_ENV=production
       - RAILS_ENV=production
@@ -42,12 +42,14 @@ services:
     entrypoint: docker/entrypoints/rails.sh
     command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
     restart: always
+    networks:
+      - web
 
-  sidekiq:
+  sidekiq_chatwoot:
     <<: *base
     depends_on:
-      - postgres
-      - redis
+      - postgres_chatwoot
+      - redis_chatwoot
     environment:
       - NODE_ENV=production
       - RAILS_ENV=production
@@ -55,28 +57,29 @@ services:
     command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
     restart: always
 
-  postgres:
+  postgres_chatwoot:
     image: pgvector/pgvector:pg16
     restart: always
-    ports:
-      - '127.0.0.1:5432:5432'
+    env_file: .env
+    #ports:
+    #  - '127.0.0.1:5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=chatwoot
       - POSTGRES_USER=postgres
       # Please provide your own password.
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
-  redis:
+  redis_chatwoot:
     image: redis:alpine
     restart: always
     command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
     env_file: .env
     volumes:
       - redis_data:/data
-    ports:
-      - '127.0.0.1:6379:6379'
+    #ports:
+    #  - '127.0.0.1:6379:6379'
 
   # Serviço para compilar assets quando necessário
   vite-build:
@@ -96,3 +99,7 @@ volumes:
   postgres_data:
   redis_data:
   node_modules_cache:
+
+networks:
+  web:
+    external: true
