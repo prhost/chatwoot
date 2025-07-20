@@ -24,7 +24,7 @@ services:
       - ./db:/app/db
       - ./spec:/app/spec
       - ./enterprise:/app/enterprise
-      - ./public:/app/public
+      - ./public/brand-assets:/app/public/brand-assets
 
   rails_chatwoot:
     <<: *base
