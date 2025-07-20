@@ -24,7 +24,7 @@ services:
       - ./db:/app/db
       - ./spec:/app/spec
       - ./enterprise:/app/enterprise
-      # EVITAR: ./app (completo) e ./public - quebram os assets!
+      - ./public:/app/public
 
   rails_chatwoot:
     <<: *base
