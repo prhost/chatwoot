@@ -211,7 +211,7 @@ export const colors = {
     },
 
     black: '#000000',
-    brand: '#003F5C',
+    brand: '#2781F6',
     background: 'rgb(var(--background-color) / <alpha-value>)',
     solid: {
       1: 'rgb(var(--solid-1) / <alpha-value>)',
