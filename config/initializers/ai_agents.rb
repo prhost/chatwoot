@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'ai_agents'
+require 'agents'
 
 Rails.application.config.after_initialize do
   api_key = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_API_KEY')&.value
