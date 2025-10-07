@@ -123,6 +123,25 @@ update_code() {
     fi
 }
 
+# Limpar e reinstalar gems
+reinstall_gems() {
+    log "Limpando e reinstalando gems..."
+    
+    # Parar containers para limpar gems
+    log "Parando containers para limpeza de gems..."
+    $DOCKER_COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" stop rails_chatwoot sidekiq_chatwoot || true
+    
+    # Limpar cache do bundler e reinstalar gems
+    log "Limpando cache do bundler e reinstalando gems..."
+    $DOCKER_COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" run --rm rails_chatwoot sh -c "
+        bundle clean --force || true
+        rm -rf /gems/* || true
+        bundle install --without development test --redownload
+    " || error "Falha na reinstalação das gems"
+    
+    success "Gems reinstaladas com sucesso"
+}
+
 # Compilar assets frontend
 compile_frontend() {
     log "Compilando assets frontend..."
@@ -181,6 +200,7 @@ main() {
     create_backup
     stop_containers
     update_code
+    reinstall_gems
     compile_frontend
     start_containers
     verify_application
