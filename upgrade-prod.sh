@@ -73,7 +73,6 @@ create_backup() {
     [ -d "enterprise" ] && cp -r enterprise "$TEMP_BACKUP_DIR/" || warning "Diretório enterprise/ não encontrado, pulando..."
     [ -d "app" ] && cp -r app "$TEMP_BACKUP_DIR/" || warning "Diretório app/ não encontrado, pulando..."
     [ -d "public" ] && cp -r public "$TEMP_BACKUP_DIR/" || warning "Diretório public/ não encontrado, pulando..."
-    [ -d "storage" ] && cp -r storage "$TEMP_BACKUP_DIR/" || warning "Diretório storage/ não encontrado, pulando..."
     [ -d "docker" ] && cp -r docker "$TEMP_BACKUP_DIR/" || warning "Diretório docker/ não encontrado, pulando..."
     [ -d "db" ] && cp -r db "$TEMP_BACKUP_DIR/" || warning "Diretório db/ não encontrado, pulando..."
     cp Gemfile* "$TEMP_BACKUP_DIR/" || warning "Falha ao copiar Gemfile*"
@@ -135,8 +134,7 @@ reinstall_gems() {
     log "Limpando cache do bundler e reinstalando gems..."
     $DOCKER_COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" run --rm rails_chatwoot sh -c "
         bundle clean --force || true
-        rm -rf /gems/* || true
-        bundle install --without development test --redownload
+        bundle install --without development test
     " || error "Falha na reinstalação das gems"
     
     success "Gems reinstaladas com sucesso"
