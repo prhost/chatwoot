@@ -12,6 +12,29 @@ BACKUP_DIR="./backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_NAME="chatwoot_backup_${TIMESTAMP}"
 DOCKER_COMPOSE_FILE="docker-compose.production.modificado.yaml"
+SKIP_BACKUP=false
+
+# Processar argumentos
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-backup)
+            SKIP_BACKUP=true
+            shift
+            ;;
+        -h|--help)
+            echo "Uso: $0 [opções]"
+            echo "Opções:"
+            echo "  --no-backup    Pular o backup (mais rápido)"
+            echo "  -h, --help     Mostrar esta ajuda"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Opção desconhecida: $1${NC}"
+            echo "Use --help para ver as opções disponíveis"
+            exit 1
+            ;;
+    esac
+done
 
 # Detectar comando docker-compose
 if command -v docker-compose >/dev/null 2>&1; then
@@ -194,8 +217,13 @@ verify_application() {
 # Função principal
 main() {
     log "Iniciando processo de upgrade de produção..."
-
-    create_backup
+    
+    if [ "$SKIP_BACKUP" = true ]; then
+        warning "Backup desabilitado (--no-backup)"
+    else
+        create_backup
+    fi
+    
     stop_containers
     update_code
     reinstall_gems
@@ -205,7 +233,11 @@ main() {
 
     echo -e "\n=========================================="
     echo -e "${GREEN}    UPGRADE CONCLUÍDO COM SUCESSO!${NC}"
-    echo -e "${GREEN}    Backup: $BACKUP_DIR/${BACKUP_NAME}.tar.gz${NC}"
+    if [ "$SKIP_BACKUP" = false ]; then
+        echo -e "${GREEN}    Backup: $BACKUP_DIR/${BACKUP_NAME}.tar.gz${NC}"
+    else
+        echo -e "${YELLOW}    Backup: PULADO (--no-backup)${NC}"
+    fi
     echo -e "${GREEN}    Data: $(date)${NC}"
     echo -e "=========================================="
 }
