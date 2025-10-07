@@ -188,6 +188,7 @@ gem 'reverse_markdown'
 gem 'iso-639'
 gem 'ruby-openai'
 gem 'ai-agents', '>= 0.4.3'
+gem 'ruby_llm', '~> 1.6.0'
 
 # TODO: Move this gem as a dependency of ai-agents
 gem 'ruby_llm-schema'
