@@ -1,6 +1,14 @@
-require 'agents'
+# Verificar se o gem agents está disponível
+begin
+  require 'agents'
+  AGENTS_AVAILABLE = true
+rescue LoadError => e
+  AGENTS_AVAILABLE = false
+  puts "WARNING: Agents gem not available: #{e.message}"
+end
 
-class Captain::Tools::BasePublicTool < Agents::Tool
+if AGENTS_AVAILABLE
+  class Captain::Tools::BasePublicTool < Agents::Tool
   def initialize(assistant)
     @assistant = assistant
     super()
@@ -40,6 +48,48 @@ class Captain::Tools::BasePublicTool < Agents::Tool
   def log_tool_usage(action, details = {})
     Rails.logger.info do
       "#{self.class.name}: #{action} for assistant #{@assistant&.id} - #{details.inspect}"
+    end
+  end
+  end
+else
+  # Definir uma classe dummy para evitar NameError
+  class Captain::Tools::BasePublicTool
+    def initialize(assistant)
+      @assistant = assistant
+    end
+
+    def active?
+      true
+    end
+
+    def permissions
+      []
+    end
+
+    private
+
+    def account_scoped(model_class)
+      model_class.where(account_id: @assistant.account_id)
+    end
+
+    def find_conversation(state)
+      conversation_id = state&.dig(:conversation, :id)
+      return nil unless conversation_id
+
+      account_scoped(::Conversation).find_by(id: conversation_id)
+    end
+
+    def find_contact(state)
+      contact_id = state&.dig(:contact, :id)
+      return nil unless contact_id
+
+      account_scoped(::Contact).find_by(id: contact_id)
+    end
+
+    def log_tool_usage(action, details = {})
+      Rails.logger.info do
+        "#{self.class.name}: #{action} for assistant #{@assistant&.id} - #{details.inspect}"
+      end
     end
   end
 end

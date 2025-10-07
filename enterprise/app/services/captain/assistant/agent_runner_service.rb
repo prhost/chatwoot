@@ -1,6 +1,14 @@
-require 'agents'
+# Verificar se o gem agents está disponível
+begin
+  require 'agents'
+  AGENTS_AVAILABLE = true
+rescue LoadError => e
+  AGENTS_AVAILABLE = false
+  puts "WARNING: Agents gem not available: #{e.message}"
+end
 
-class Captain::Assistant::AgentRunnerService
+if AGENTS_AVAILABLE
+  class Captain::Assistant::AgentRunnerService
   CONVERSATION_STATE_ATTRIBUTES = %i[
     id display_id inbox_id contact_id status priority
     label_list custom_attributes additional_attributes
@@ -156,6 +164,23 @@ class Captain::Assistant::AgentRunnerService
       @callbacks[:on_agent_handoff].call(*args)
     rescue StandardError => e
       Rails.logger.warn "[Captain] Callback error for agent_handoff: #{e.message}"
+    end
+  end
+  end
+else
+  # Definir uma classe dummy para evitar NameError
+  class Captain::Assistant::AgentRunnerService
+    def initialize(assistant:, conversation: nil, callbacks: {})
+      @assistant = assistant
+      @conversation = conversation
+      @callbacks = callbacks
+    end
+
+    def generate_response(message_history: [])
+      {
+        'response' => 'AI Agents not available',
+        'reasoning' => 'The agents gem is not installed'
+      }
     end
   end
 end
